@@ -58,7 +58,6 @@ int sheet_setting[8][4] = {
   ,{35,20,20,35}
 }; 
 
-int  SR[4] = {15,2,2,2};
                 
 
 double Setpoint,Input,Output; //PID variables 
