@@ -32,7 +32,7 @@ double rudder_increment = 8.97;
 double sheet_end = 1932;
 double sheet_increment = 9.53736;
          
-
+int leewayCor;
   
 enum sailByCourse {  
   compassMethod,
@@ -60,8 +60,6 @@ int sheet_setting[8][4] = {
 
 int  SR[4] = {15,2,2,2};
                 
-
-boolean starboard;
 
 double Setpoint,Input,Output; //PID variables 
 PID rudder(&Input,&Output,&Setpoint,1,0.05,0.25,DIRECT);//used to Initialize PID
@@ -381,4 +379,96 @@ void calculate_PID_input(int sailByCourse) {
         }
     
 
+}
+
+
+
+//***********************************************************************************************************************************
+// TACKING FUNCTIONS
+//***********************************************************************************************************************************
+void tack(short weather, int course_descp, int tack_type, boolean starboard) { //based off longDistanceRaceTack from 2012
+  
+  int H = ((double)tack_rudder_angles[tack_type][weather]/100)*45;   
+  int baseRudderTime;
+  int preTackRudderAngle;
+  
+  Serial3.println("$FTack ");
+  
+  preTackRudderAngle = leewayCor;   //**TODO se this value
+  
+  switch(weather) {
+    case 0: baseRudderTime = 1500;
+            break;  
+    case 1: baseRudderTime = 1300;
+            break;          
+    case 2: baseRudderTime = 1200;
+            break;
+    case 3: baseRudderTime = 1100;
+            break;             
+  } 
+  
+
+  if (!starboard) H = -H;
+   
+  if (starboard) {   
+     preTackRudderAngle =  -preTackRudderAngle;    
+     
+  }
+    
+ 
+  adjust_sheets(95); //power up for the tack
+  APM_RC.OutputCh(rudder_output,((preTackRudderAngle*rudder_increment) + rudder_centre));    
+  waitForSpecifiedDuration(2000);
+
+
+  APM_RC.OutputCh(rudder_output,((0.5*H*rudder_increment) + rudder_centre));  
+  waitForSpecifiedDuration(baseRudderTime);
+
+  APM_RC.OutputCh(rudder_output, ((1.2*H*rudder_increment) + rudder_centre)); 
+  waitForSpecifiedDuration(baseRudderTime*2);
+  
+ 
+  adjust_sheets(sheet_setting[course_descp][weather]);
+  waitForSpecifiedDuration(baseRudderTime);
+ 
+  updateAverageApparentWindAfterTack();
+}
+
+void updateAverageApparentWindAfterTack(){ 
+ int apparentCount = 0;
+ int apparentTotal = 0;
+ long apparentTimer = millis();
+  
+ while(apparentCount < 10) {
+   
+   if(millis() - apparentTimer >= 50) {
+     
+      update_ApprentWind(); 
+      apparentTotal += apprentWind;
+      apparentCount++;
+      apparentTimer = millis();
+   }
+ }
+ apprentWind = apparentTotal/10;
+
+ for(int i  = 0; i < 120 ; i++)                           
+      averageApprentWind();
+
+
+}
+
+void checkForRCOverride(){
+    read_radio();
+    if(pilot_switch < RC_sail) {
+        emergencySail();
+    }
+}
+
+void waitForSpecifiedDuration(int duration){
+  long timer = 0;
+  long startTimer = millis();
+  while(timer < duration){  
+    timer = millis() - startTimer;
+	checkForRCOverride();
+  }
 }
