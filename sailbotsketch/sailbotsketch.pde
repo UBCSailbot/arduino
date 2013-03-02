@@ -58,6 +58,12 @@ int sheet_setting[8][4] = {
   ,{35,20,20,35}
 }; 
 
+enum mode {
+  RC_MODE, AUTO_MODE
+};
+
+int sheet_percentage;
+
                 
 
 double Setpoint,Input,Output; //PID variables 
@@ -90,7 +96,6 @@ int  data_input_switch = 1200;
 
 FastSerialPort0(Serial);
 FastSerialPort1(Serial1);   // GPS port (except for GPS_PROTOCOL_IMU)
-FastSerialPort3(Serial3);   // xBee communication between boat and laptop
 
 boolean data_received = false;
 boolean sailingChallenge = false;
@@ -113,7 +118,6 @@ void setup()
 
   Serial.begin(57600, 128, 128); 
   Serial1.begin(57600, 128, 128); 
-  Serial3.begin(57600, 256, 128);
   
   g_gps = &g_gps_driver;
   g_gps->init(); 
@@ -128,10 +132,11 @@ void setup()
 void loop()
 {
     read_radio();
-    if(pilot_switch < RC_sail || data_input_switch < Read_GUI_Data_Challenge_Finished )      // This needs more testing
+    //Serial.println(pilot_switch); Serial.println(data_input_switch);
+    //if(pilot_switch < RC_sail || data_input_switch < Read_GUI_Data_Challenge_Finished )      // This needs more testing
       rc_sail(); 
-    else
-         pi_sail();
+    //else
+      //pi_sail();
  
 }
 
@@ -199,14 +204,10 @@ void averageApprentWind() {
 //***********************************************************************************************************************************
 void emergencySail() {
   while(pilot_switch < RC_sail) {
-   
-         read_radio();   
-         APM_RC.OutputCh(rudder_output, radio_in[rudder_output]);           
-         APM_RC.OutputCh(sheet_output, radio_in[sheet_output]);   
-  
-   
-  } 
-  
+     read_radio();   
+     APM_RC.OutputCh(rudder_output, radio_in[rudder_output]);           
+     APM_RC.OutputCh(sheet_output, radio_in[sheet_output]);   
+  }  
 }
 
 
@@ -214,47 +215,50 @@ void emergencySail() {
 //***********************************************************************************************************************************
 
 void rc_sail() {
+  
+   float rcSheetPercent;  
+   
+   read_radio();   
+   APM_RC.OutputCh(rudder_output, radio_in[rudder_output]);           
+   APM_RC.OutputCh(sheet_output, radio_in[sheet_output]);   
+   
+   rcSheetPercent = (sheet_end - radio_in[sheet_output])/sheet_increment;
+   sheet_percentage = pow(rcSheetPercent,0.625) * 5.62 ;
+   
+   update_GPS();
+   update_ApprentWind();  
+   printTelemetryData();       
+            
+}
+
+void printTelemetryData(){
    char guiDataRC[200]; 
    char cogStr[10];
    char current_headingStr[10];
    char sogStr[10];
-   float rcSheetPercent;  
-   int altRcPercent;   
-   
-         read_radio();   
-         APM_RC.OutputCh(rudder_output, radio_in[rudder_output]);           
-         APM_RC.OutputCh(sheet_output, radio_in[sheet_output]);   
-         
-         rcSheetPercent = (sheet_end - radio_in[sheet_output])/sheet_increment;
-         
-         altRcPercent = pow(rcSheetPercent,0.625) * 5.62 ;
-         
-            update_GPS();
-            update_ApprentWind();           
-                
-         if(millis() - update_timer >= 50) {
+   if(millis() - update_timer >= 50) {
+  
+       update_timer = millis();   
+                  
+       dtostrf(COG, 7, 0,cogStr );     
+       dtostrf(current_heading, 7, 1,current_headingStr );  
         
-            update_timer = millis();   
-                        
-           dtostrf(COG, 7, 0,cogStr );     
-           dtostrf(current_heading, 7, 1,current_headingStr );  
-            
-           sprintf(guiDataRC,"$A%11ld %11ld %8s %8s %8d %8d %8d %8d %8d ",current_position -> longitude,
-                             current_position -> latitude,cogStr,current_headingStr,apprentWind, appWindAvg,altRcPercent,g_gps -> hemisphereSatelites,g_gps->hdop);  
-                                                                                                                                                                                                                                                                                                    
-           if(!data_received)                  
-                Serial3.println(guiDataRC);    
-                Serial.println(guiDataRC);                            
-      }                                                            
+       sprintf(guiDataRC,"%d, %11ld, %11ld, %8s, %8s, %8d, %8d, %8d, %8d, %8d", RC_MODE, current_position -> longitude,
+                         current_position -> latitude,cogStr,current_headingStr,apprentWind, appWindAvg,sheet_percentage,g_gps -> hemisphereSatelites,g_gps->hdop);  
+                                                                                                                                                                                                                                                                                              
+       Serial.println(guiDataRC);                            
+    }                                                            
 
+  
 }
-
-
 //***********************************************************************************************************************************
 
 void pi_sail() {
   
-         read_data_fromPi();                 
+  read_data_fromPi();
+  update_GPS();
+  update_ApprentWind();  
+  printTelemetryData();         
 //**TODO** complete this function
   
 
@@ -281,7 +285,7 @@ void pi_sail() {
      
     if(inCount > 0)  
      {
-      int sheet_percentage=atoi(inString);
+      sheet_percentage=atoi(inString);
       Serial.println(sheet_percentage);
       adjust_sheets(sheet_percentage);
       //**TODO this won't work because it is called inside RC_sail so RC overrids
@@ -310,10 +314,7 @@ void setPIDforChallenge() {
 
 
 void adjust_sheets(int sheet_percent) {
-       int altRcPercent;
-       
-       //altRcPercent = pow( sheet_percent,1.65) * 0.05 ;
-       
+       int altRcPercent;       
        altRcPercent = pow( sheet_percent,1.74) * 0.033 ;
        
        APM_RC.OutputCh(sheet_output,sheet_end - altRcPercent*sheet_increment ); 
@@ -391,7 +392,7 @@ void tack(short weather, int course_descp, int tack_type, boolean starboard) { /
   int baseRudderTime;
   int preTackRudderAngle;
   
-  Serial3.println("$FTack ");
+  Serial.println("$FTack ");
   
   preTackRudderAngle = leewayCor;   //**TODO se this value
   
