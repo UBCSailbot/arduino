@@ -93,7 +93,7 @@ int radio_out[2];     // Output......0(rudder)  1(sheet winch)
 int  pilot_switch = 1200;  
 int  data_input_switch = 1200;
 
-FastSerialPort0(Serial);
+FastSerialPort0(Serial);    //USB port
 FastSerialPort1(Serial1);   // GPS port (except for GPS_PROTOCOL_IMU)
 
 boolean data_received = false;
@@ -102,7 +102,6 @@ boolean sailingChallenge = false;
 
 GPS         *g_gps;
 HEMISPHERE_GPS_NMEA     g_gps_driver(&Serial1);
-unsigned short MA3_pin=63;//**TODO this needs to be verified!
 
 //***********************************************************************************************************************************
 
@@ -111,9 +110,6 @@ void setup()
 
   delay(500);          //Wait at least 500 milli-seconds for device initialization
   Wire.begin();        // join i2c bus (address optional for master)
-  
-  pinMode(MA3_pin, OUTPUT);
-  digitalWrite(MA3_pin, HIGH);
 
   Serial.begin(57600, 128, 128); 
   Serial1.begin(57600, 128, 128); 
@@ -181,8 +177,8 @@ void update_ApprentWind(void)  {
 
 //from http://rpg.dosmage.net/project/sailboat/_m_a3_8pde_source.html
 int readEncoder(){
-  int  MA3_OFFSET=0;//this is the absolute offset
-   double sensorValue = analogRead(MA3_pin);
+   const int  MA3_OFFSET=0;//this is the absolute offset
+   double sensorValue = analogRead(A1);
    int apparentWind = convertTo360(sensorValue);
    return apparentWind;
 }
