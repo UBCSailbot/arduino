@@ -111,6 +111,9 @@ void setup()
   Serial.begin(57600, 128, 128); 
   Serial1.begin(57600, 128, 128); 
   
+  pinMode(A1, OUTPUT); //encoder pin
+  digitalWrite(A1, HIGH);
+
   g_gps = &g_gps_driver;
   g_gps->init(); 
 
