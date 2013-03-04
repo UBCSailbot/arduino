@@ -58,12 +58,11 @@ int sheet_setting[8][4] = {
   ,{35,20,20,35}
 }; 
 
-enum mode {
-  RC_MODE, AUTO_MODE
-};
+int mode;
+enum{RC_MODE, AUTO_MODE};
 
 int sheet_percentage;
-
+String parsedData[5];
                 
 
 double Setpoint,Input,Output; //PID variables 
@@ -133,10 +132,14 @@ void loop()
 {
     read_radio();
     //Serial.println(pilot_switch); Serial.println(data_input_switch);
-    //if(pilot_switch < RC_sail || data_input_switch < Read_GUI_Data_Challenge_Finished )      // This needs more testing
+    if(pilot_switch < RC_sail || data_input_switch < Read_GUI_Data_Challenge_Finished ) {     // This needs more testing
+      mode=RC_MODE;
       rc_sail(); 
-    //else
-      //pi_sail();
+    }
+    else{
+      mode=AUTO_MODE;
+      pi_sail();
+    }
  
 }
 
@@ -243,7 +246,7 @@ void printTelemetryData(){
        dtostrf(COG, 7, 0,cogStr );     
        dtostrf(current_heading, 7, 1,current_headingStr );  
         
-       sprintf(guiDataRC,"%d, %11ld, %11ld, %8s, %8s, %8d, %8d, %8d, %8d, %8d", RC_MODE, current_position -> longitude,
+       sprintf(guiDataRC,"%d, %11ld, %11ld, %8s, %8s, %8d, %8d, %8d, %8d, %8d", mode, current_position -> longitude,
                          current_position -> latitude,cogStr,current_headingStr,apprentWind, appWindAvg,sheet_percentage,g_gps -> hemisphereSatelites,g_gps->hdop);  
                                                                                                                                                                                                                                                                                               
        Serial.println(guiDataRC);                            
@@ -269,7 +272,7 @@ void pi_sail() {
 
  void read_data_fromPi () {
 
-    #define INLENGTH 250
+   #define INLENGTH 250
    char inString[INLENGTH + 1] ;
    int inCount; 
 
@@ -277,23 +280,55 @@ void pi_sail() {
  
    while(Serial.available() > 0)  {                                                 
      inString[inCount++] = Serial.read();                                           
-     delay(2);   // Changed from 1 May 17, 2012 by JK.
-     
+     delay(2);   // Changed from 1 May 17, 2012 by JK. 
    }
  
    inString[inCount] = '\0';      
-     
-    if(inCount > 0)  
-     {
-      sheet_percentage=atoi(inString);
-      Serial.println(sheet_percentage);
-      adjust_sheets(sheet_percentage);
-      //**TODO this won't work because it is called inside RC_sail so RC overrids
+   parsePiData(inString);
+   executePiInstructions();
+
+}
+
+void executePiInstructions(){
+   //ex "STEER,2,45"
+   // or "ADJUST_SHEETS, 50"
+   if(parsedData[0]=="ADJUST_SHEETS"){
+     sheet_percentage=parsedData[1].toInt();
+     adjust_sheets(sheet_percentage);
+   }
+   else if(parsedData[0]=="STEER"){
+    course = parsedData[2].toInt();
+    int sailByCourse = parsedData[1].toInt();
+    steer(sailByCourse);
+   }
+  else if(parsedData[0]=="STEER"){
+   }
+  else if(parsedData[0]=="TACK"){
+   }
+   else if(parsedData[0]=="GYBE"){
+   }
+  
+}
+
+void parsePiData(char charArray[]){
+   const char *ptr = charArray;
+   char field [ 32 ]; //arbitrary 32 char limit
+   int n;
+
+   for (int count=0; sscanf(ptr, "%31[^,]%n", field, &n) == 1; count++)
+   {
+      Serial.println(field); //TODO remove this line once tested
+      parsedData[count]=field;
+      
+      ptr += n; /* advance the pointer by the number of characters read */
+      if ( *ptr != ',' )
+      {
+         break; /* didn't find an expected delimiter, done? */
       }
-
-
- } 
-
+      ++ptr; /* skip the delimiter */
+      count++;
+   }
+}
 //***********************************************************************************************************************************
 void setPIDforChallenge() {
   
