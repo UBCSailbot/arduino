@@ -96,9 +96,6 @@ int  data_input_switch = 1200;
 FastSerialPort0(Serial);    //USB port
 FastSerialPort1(Serial1);   // GPS port (except for GPS_PROTOCOL_IMU)
 
-boolean data_received = false;
-boolean sailingChallenge = false;
-//int inCount = 0;
 
 GPS         *g_gps;
 HEMISPHERE_GPS_NMEA     g_gps_driver(&Serial1);
