@@ -60,10 +60,10 @@ int sheet_setting[8][4] = {
 
 int mode;
 enum{RC_MODE, AUTO_MODE};
-
+boolean newData =false;
 int sheet_percentage;
 String parsedData[5];
-                
+int sailByCourse;          
 
 double Setpoint,Input,Output; //PID variables 
 PID rudder(&Input,&Output,&Setpoint,1,0.05,0.25,DIRECT);//used to Initialize PID
@@ -119,7 +119,7 @@ void setup()
 
   APM_RC.Init();                        // Radio Initialization
   pilot_switch = 968;
-  
+  initPID();
 }
 
 //***********************************************************************************************************************************
@@ -127,7 +127,6 @@ void setup()
 void loop()
 {
     read_radio();
-    //Serial.println(pilot_switch); Serial.println(data_input_switch);
     if(pilot_switch < RC_sail || data_input_switch < Read_GUI_Data_Challenge_Finished ) {     // This needs more testing
       mode=RC_MODE;
       rc_sail(); 
@@ -257,10 +256,13 @@ void printTelemetryData(){
 void pi_sail() {
   
   read_data_fromPi();
-  executePiInstructions();
   update_GPS();
   update_ApprentWind();  
-  printTelemetryData();         
+  printTelemetryData();
+  
+  adjust_sheets(sheet_percentage);
+  steer();
+  delay(100);  
 
 }
 
@@ -277,31 +279,17 @@ void read_data_fromPi () {
      inString[inCount++] = Serial.read();                                           
      delay(2);   // Changed from 1 May 17, 2012 by JK. 
    }
- 
-   inString[inCount] = '\0';      
-   parsePiData(inString);
+   inString[inCount] = '\0';
+   if (inCount>1){
+     newData = true;
+     parsePiData(inString);
+   }
+   else{
+     newData=false;
+   }
+
 }
 
-void executePiInstructions(){
-   //ex "STEER,2,45"
-   // or "ADJUST_SHEETS, 50"
-   if(parsedData[0].equalsIgnoreCase("ADJUST_SHEETS")){
-     sheet_percentage=parsedData[1].toInt();
-     adjust_sheets(sheet_percentage);
-   }
-   else if(parsedData[0].equalsIgnoreCase("STEER")){
-    int sailByCourse = parsedData[1].toInt();
-    course = parsedData[2].toInt();
-    steer(sailByCourse);
-   }
-   else if(parsedData[0].equalsIgnoreCase("TACK")){
-     //TODO
-   }
-   else if(parsedData[0].equalsIgnoreCase("GYBE")){
-     //TODO
-   }
-  
-}
 
 void parsePiData(char charArray[]){
    const char *ptr = charArray;
@@ -319,11 +307,26 @@ void parsePiData(char charArray[]){
          break; /* didn't find an expected delimiter, done? */
       }
       ++ptr; /* skip the delimiter */
-      count++;
+   }
+   
+   if(parsedData[0].equalsIgnoreCase("ADJUST_SHEETS")){
+     Serial.println("adjustedsheets");
+     sheet_percentage=parsedData[1].toInt();
+   }
+   else if(parsedData[0].equalsIgnoreCase("STEER")){
+    sailByCourse = parsedData[1].toInt();
+    course = parsedData[2].toInt();
+    Serial.println("steered");
+   }
+   else if(parsedData[0].equalsIgnoreCase("TACK")){
+     //TODO
+   }
+   else if(parsedData[0].equalsIgnoreCase("GYBE")){
+     //TODO
    }
 }
 //***********************************************************************************************************************************
-void setPIDforChallenge() {
+void initPID() {
   
   rudder.SetMode(AUTOMATIC);
   
@@ -349,9 +352,10 @@ void adjust_sheets(int sheet_percent) {
 
 //***********************************************************************************************************************************
 
-void steer(int  sailByCourse) {
+void steer() {
   calculate_PID_input(sailByCourse);
   rudder.Compute();          //PID calculates rudder Output correction
+  Serial.println(Output);
   APM_RC.OutputCh(rudder_output, Output*rudder_increment + rudder_centre);
 }
 
@@ -390,6 +394,8 @@ void calculate_PID_input(int sailByCourse) {
             Setpoint = 0;
             Input -= difference;        
         }
+        
+        Serial.println(Input);
     
 }
 
