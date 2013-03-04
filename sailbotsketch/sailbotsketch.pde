@@ -37,7 +37,7 @@ int leewayCor;
 enum sailByCourse {  
   compassMethod,
   cogMethod,
-  apprentWindMethod  
+  apparentWindMethod  
 };  
  
 int tack_rudder_angles[4][4] = {
@@ -72,7 +72,7 @@ double current_heading;
 int COG;
 int intSOG;
 double SOG;
-int apprentWind = 0;
+int apparentWind = 0;
 int appWindAvg=0;
 int numberSatelites;
 
@@ -174,7 +174,7 @@ void update_GPS(void)
 //***********************************************************************************************************************************
 void update_ApprentWind(void)  {
 
-  apprentWind = readEncoder();
+  apparentWind = readEncoder();
   averageApprentWind();
   
 }
@@ -182,16 +182,18 @@ void update_ApprentWind(void)  {
 //from http://rpg.dosmage.net/project/sailboat/_m_a3_8pde_source.html
 int readEncoder(){
   int  MA3_OFFSET=0;//this is the absolute offset
-   int MA3_reading = analogRead(MA3_pin);
-   int MA3_heading = add_headings( map(MA3_reading, 0, 1007, 0, 359), - MA3_OFFSET );
-   return MA3_heading;
+   double sensorValue = analogRead(MA3_pin);
+   int apparentWind = convertTo360(sensorValue);
+   return apparentWind;
 }
 
- int add_headings(int heading_a, int heading_b)
-{
-   return (heading_a + heading_b + 360) % 360; //this could be a problem since we have typically done things in +/- 180
+int convertTo360 (double sensorValue){
+    int result= (int)-1*sensorValue*360/1024;
+    if(result < -180){
+       result += 360;
+     }
+     return result;
 }
-
 void averageApprentWind() {
   //**TODO
   //complete a new averaging algorithm
@@ -247,7 +249,7 @@ void printTelemetryData(){
        dtostrf(current_heading, 7, 1,current_headingStr );  
         
        sprintf(guiDataRC,"%d, %11ld, %11ld, %8s, %8s, %8d, %8d, %8d, %8d, %8d", mode, current_position -> longitude,
-                         current_position -> latitude,cogStr,current_headingStr,apprentWind, appWindAvg,sheet_percentage,g_gps -> hemisphereSatelites,g_gps->hdop);  
+                         current_position -> latitude,cogStr,current_headingStr,apparentWind, appWindAvg,sheet_percentage,g_gps -> hemisphereSatelites,g_gps->hdop);  
                                                                                                                                                                                                                                                                                               
        Serial.println(guiDataRC);                            
     }                                                            
@@ -259,25 +261,22 @@ void printTelemetryData(){
 void pi_sail() {
   
   read_data_fromPi();
+  executePiInstructions();
   update_GPS();
   update_ApprentWind();  
   printTelemetryData();         
-//**TODO** complete this function
-  
 
 }
 
  
 //***********************************************************************************************************************************
 
- void read_data_fromPi () {
+void read_data_fromPi () {
 
    #define INLENGTH 250
    char inString[INLENGTH + 1] ;
    int inCount; 
-
    inCount = 0;
- 
    while(Serial.available() > 0)  {                                                 
      inString[inCount++] = Serial.read();                                           
      delay(2);   // Changed from 1 May 17, 2012 by JK. 
@@ -285,27 +284,25 @@ void pi_sail() {
  
    inString[inCount] = '\0';      
    parsePiData(inString);
-   executePiInstructions();
-
 }
 
 void executePiInstructions(){
    //ex "STEER,2,45"
    // or "ADJUST_SHEETS, 50"
-   if(parsedData[0]=="ADJUST_SHEETS"){
+   if(parsedData[0].equalsIgnoreCase("ADJUST_SHEETS")){
      sheet_percentage=parsedData[1].toInt();
      adjust_sheets(sheet_percentage);
    }
-   else if(parsedData[0]=="STEER"){
-    course = parsedData[2].toInt();
+   else if(parsedData[0].equalsIgnoreCase("STEER")){
     int sailByCourse = parsedData[1].toInt();
+    course = parsedData[2].toInt();
     steer(sailByCourse);
    }
-  else if(parsedData[0]=="STEER"){
+   else if(parsedData[0].equalsIgnoreCase("TACK")){
+     //TODO
    }
-  else if(parsedData[0]=="TACK"){
-   }
-   else if(parsedData[0]=="GYBE"){
+   else if(parsedData[0].equalsIgnoreCase("GYBE")){
+     //TODO
    }
   
 }
@@ -349,39 +346,27 @@ void setPIDforChallenge() {
 
 
 void adjust_sheets(int sheet_percent) {
-       int altRcPercent;       
-       altRcPercent = pow( sheet_percent,1.74) * 0.033 ;
-       
-       APM_RC.OutputCh(sheet_output,sheet_end - altRcPercent*sheet_increment ); 
+   int altRcPercent;       
+   altRcPercent = pow( sheet_percent,1.74) * 0.033 ;
+   APM_RC.OutputCh(sheet_output,sheet_end - altRcPercent*sheet_increment ); 
 }
 
 //***********************************************************************************************************************************
 
 void steer(int  sailByCourse) {
-  
-
-    
   calculate_PID_input(sailByCourse);
-  
   rudder.Compute();          //PID calculates rudder Output correction
- 
-
   APM_RC.OutputCh(rudder_output, Output*rudder_increment + rudder_centre);
-     
-
 }
 
 
 //***********************************************************************************************************************************
 
 void calculate_PID_input(int sailByCourse) {
-    
 
-    int difference;
-   
+    int difference; 
     Input = 0;
        
-        
     switch(sailByCourse) {
    
     case compassMethod: difference = course - current_heading;
@@ -390,30 +375,26 @@ void calculate_PID_input(int sailByCourse) {
     case cogMethod: difference = course - COG;
     break;
  
-    case apprentWindMethod: difference = appWindAvg - course;
+    case apparentWindMethod: difference = appWindAvg - course;
     break;      
-      
-  
+
     }    
     
-  
     if (difference > 180 || difference < -180) {
         if (difference < 0) {
             difference += 360;
         }
         else {
-               difference -= 360;
+            difference -= 360;
         }
         Setpoint = 0;
-        Input -= difference;
-            
+        Input -= difference;    
         }
         else {
-                Setpoint = 0;
-                Input -= difference;        
+            Setpoint = 0;
+            Input -= difference;        
         }
     
-
 }
 
 
@@ -479,12 +460,12 @@ void updateAverageApparentWindAfterTack(){
    if(millis() - apparentTimer >= 50) {
      
       update_ApprentWind(); 
-      apparentTotal += apprentWind;
+      apparentTotal += apparentWind;
       apparentCount++;
       apparentTimer = millis();
    }
  }
- apprentWind = apparentTotal/10;
+ apparentWind = apparentTotal/10;
 
  for(int i  = 0; i < 120 ; i++)                           
       averageApprentWind();
