@@ -60,7 +60,6 @@ int sheet_setting[8][4] = {
 
 int mode;
 enum{RC_MODE, AUTO_MODE};
-boolean newData =false;
 int sheet_percentage;
 String parsedData[5];
 int sailByCourse;          
@@ -73,7 +72,7 @@ int COG;
 int intSOG;
 double SOG;
 int apparentWind = 0;
-int appWindAvg=0;
+double appWindAvg=0;
 int numberSatelites;
 
 long update_timer = 0;
@@ -111,7 +110,7 @@ void setup()
   Serial.begin(57600, 128, 128); 
   Serial1.begin(57600, 128, 128); 
   
-  pinMode(A1, OUTPUT); //encoder pin
+  pinMode(A1, INPUT); //encoder pin
   digitalWrite(A1, HIGH);
 
   g_gps = &g_gps_driver;
@@ -178,8 +177,8 @@ void update_ApprentWind(void)  {
 int readEncoder(){
    const int  MA3_OFFSET=0;//this is the absolute offset
    double sensorValue = analogRead(A1);
-   int apparentWind = convertTo360(sensorValue);
-   return apparentWind;
+   int degreeValue = convertTo360(sensorValue);
+   return degreeValue;
 }
 
 int convertTo360 (double sensorValue){
@@ -189,13 +188,23 @@ int convertTo360 (double sensorValue){
      }
      return result;
 }
+
 void averageApprentWind() {
   //**TODO
-  //complete a new averaging algorithm
-  //appWindAvg= _________________
-  
-  
-  
+  int diff = abs(appWindAvg-apparentWind);
+  if (diff>=180 && appWindAvg<apparentWind){
+    appWindAvg+=360;
+  }
+  else if (diff>=180 && appWindAvg>apparentWind){
+    apparentWind+=360;
+  }
+  appWindAvg=0.999*(double)appWindAvg+0.001*(double)apparentWind;
+  if (appWindAvg>180){
+    appWindAvg-=360;
+  }
+  else if (appWindAvg<-180){
+    appWindAvg+=360;
+  }
 }
 
 
@@ -226,7 +235,7 @@ void rc_sail() {
    sheet_percentage = pow(rcSheetPercent,0.625) * 5.62 ;
    
    update_GPS();
-   update_ApprentWind();  
+   update_ApprentWind();
    printTelemetryData();       
             
 }
@@ -244,7 +253,7 @@ void printTelemetryData(){
        dtostrf(current_heading, 7, 1,current_headingStr );  
         
        sprintf(guiDataRC,"%d, %11ld, %11ld, %8s, %8s, %8d, %8d, %8d, %8d, %8d", mode, current_position -> longitude,
-                         current_position -> latitude,cogStr,current_headingStr,apparentWind, appWindAvg,sheet_percentage,g_gps -> hemisphereSatelites,g_gps->hdop);  
+                         current_position -> latitude,cogStr,current_headingStr,apparentWind, (int)appWindAvg,sheet_percentage,g_gps -> hemisphereSatelites,g_gps->hdop);  
                                                                                                                                                                                                                                                                                               
        Serial.println(guiDataRC);                            
     }                                                            
@@ -262,8 +271,6 @@ void pi_sail() {
   
   adjust_sheets(sheet_percentage);
   steer();
-  delay(100);  
-
 }
 
  
@@ -281,11 +288,7 @@ void read_data_fromPi () {
    }
    inString[inCount] = '\0';
    if (inCount>1){
-     newData = true;
      parsePiData(inString);
-   }
-   else{
-     newData=false;
    }
 
 }
@@ -298,7 +301,7 @@ void parsePiData(char charArray[]){
 
    for (int count=0; sscanf(ptr, "%31[^,]%n", field, &n) == 1; count++)
    {
-      Serial.println(field); //TODO remove this line once tested
+      //Serial.println(field);
       parsedData[count]=field;
       
       ptr += n; /* advance the pointer by the number of characters read */
@@ -310,13 +313,11 @@ void parsePiData(char charArray[]){
    }
    
    if(parsedData[0].equalsIgnoreCase("ADJUST_SHEETS")){
-     Serial.println("adjustedsheets");
      sheet_percentage=parsedData[1].toInt();
    }
    else if(parsedData[0].equalsIgnoreCase("STEER")){
     sailByCourse = parsedData[1].toInt();
     course = parsedData[2].toInt();
-    Serial.println("steered");
    }
    else if(parsedData[0].equalsIgnoreCase("TACK")){
      //TODO
@@ -355,7 +356,6 @@ void adjust_sheets(int sheet_percent) {
 void steer() {
   calculate_PID_input(sailByCourse);
   rudder.Compute();          //PID calculates rudder Output correction
-  Serial.println(Output);
   APM_RC.OutputCh(rudder_output, Output*rudder_increment + rudder_centre);
 }
 
@@ -393,10 +393,7 @@ void calculate_PID_input(int sailByCourse) {
         else {
             Setpoint = 0;
             Input -= difference;        
-        }
-        
-        Serial.println(Input);
-    
+        }        
 }
 
 
