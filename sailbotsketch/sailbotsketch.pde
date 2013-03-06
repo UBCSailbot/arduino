@@ -60,7 +60,7 @@ int sheet_setting[8][4] = {
 
 int mode;
 enum{RC_MODE, AUTO_MODE};
-int sheet_percentage;
+int sheet_percentage=0;
 String parsedData[5];
 int sailByCourse;          
 
@@ -158,8 +158,8 @@ void update_GPS(void)
     current_position -> latitude = g_gps->latitude;
     current_position -> longitude = g_gps->longitude;  
     COG = ((double)(g_gps -> ground_course ))/100;
-    intSOG = (int)g_gps->ground_speed;
-    SOG = ((double)intSOG)/100;     
+    intSOG = (int)g_gps->ground_speed; // in cm/s
+    SOG = ((double)intSOG)/100;
     current_heading = ((double)(g_gps -> true_heading))/100; 
     numberSatelites = g_gps -> hemisphereSatelites;  
  
@@ -247,13 +247,14 @@ void printTelemetryData(){
    char sogStr[10];
    if(millis() - update_timer >= 50) {
   
-       update_timer = millis();   
-                  
+       update_timer = millis();
+       dtostrf(SOG, 7, 2, sogStr);          
        dtostrf(COG, 7, 0,cogStr );     
        dtostrf(current_heading, 7, 1,current_headingStr );  
         
-       sprintf(guiDataRC,"%d, %11ld, %11ld, %8s, %8s, %8d, %8d, %8d, %8d, %8d", mode, current_position -> longitude,
-                         current_position -> latitude,cogStr,current_headingStr,apparentWind, (int)appWindAvg,sheet_percentage,g_gps -> hemisphereSatelites,g_gps->hdop);  
+       sprintf(guiDataRC,"%d, %11ld, %11ld, %8s, %8s, %8d, %8d, %8d, %8d, %8d, %8s", 
+           mode, current_position -> longitude, current_position -> latitude,cogStr,current_headingStr,apparentWind, 
+           (int)appWindAvg,sheet_percentage,g_gps -> hemisphereSatelites,g_gps->hdop, sogStr);  
                                                                                                                                                                                                                                                                                               
        Serial.println(guiDataRC);                            
     }                                                            
