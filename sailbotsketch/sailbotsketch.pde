@@ -39,13 +39,6 @@ enum sailByCourse {
   cogMethod,
   apparentWindMethod  
 };  
- 
-int tack_rudder_angles[4][4] = {
-  { 80,80,80,80}
-  ,{80,80,80,90}
-  ,{70,70,80,90}
-  ,{80,70,80,90}
-};
 
 int sheet_setting[8][4] = {
    {95,100,100,100}
@@ -252,7 +245,7 @@ void printTelemetryData(){
        dtostrf(COG, 7, 0,cogStr );     
        dtostrf(current_heading, 7, 1,current_headingStr );  
         
-       sprintf(guiDataRC,"%d, %11ld, %11ld, %8s, %8s, %8d, %8d, %8d, %8d, %8d, %8s %d", 
+       sprintf(guiDataRC,"%d, %11ld, %11ld, %8s, %8s, %8d, %8d, %8d, %8d, %8d, %8s, %8d", 
            mode, current_position -> longitude, current_position -> latitude,cogStr,current_headingStr,apparentWind, 
            (int)appWindAvg,sheet_percentage,g_gps -> hemisphereSatelites,g_gps->hdop, sogStr, Output);  
                                                                                                                                                                                                                                                                                               
@@ -321,7 +314,9 @@ void parsePiData(char charArray[]){
     course = parsedData[2].toInt();
    }
    else if(parsedData[0].equalsIgnoreCase("TACK")){
-     //TODO
+     short weather = parsedData[1].toInt();
+     boolean starboard = parsedData[2].toInt();
+     tack(weather,starboard);
    }
    else if(parsedData[0].equalsIgnoreCase("GYBE")){
      //TODO
@@ -402,9 +397,9 @@ void calculate_PID_input(int sailByCourse) {
 //***********************************************************************************************************************************
 // TACKING FUNCTIONS
 //***********************************************************************************************************************************
-void tack(short weather, int course_descp, int tack_type, boolean starboard) { //based off longDistanceRaceTack from 2012
-  
-  int H = ((double)tack_rudder_angles[tack_type][weather]/100)*45;   
+void tack(short weather, boolean starboard) { //based off longDistanceRaceTack from 2012
+  int tack_rudder_angle=80; //average value from last year
+  int H = ((double)tack_rudder_angle/100)*45;   
   int baseRudderTime;
   int preTackRudderAngle;
   
@@ -443,8 +438,6 @@ void tack(short weather, int course_descp, int tack_type, boolean starboard) { /
   APM_RC.OutputCh(rudder_output, ((1.2*H*rudder_increment) + rudder_centre)); 
   waitForSpecifiedDuration(baseRudderTime*2);
   
- 
-  adjust_sheets(sheet_setting[course_descp][weather]);
   waitForSpecifiedDuration(baseRudderTime);
  
   updateAverageApparentWindAfterTack();
