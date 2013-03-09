@@ -252,9 +252,9 @@ void printTelemetryData(){
        dtostrf(COG, 7, 0,cogStr );     
        dtostrf(current_heading, 7, 1,current_headingStr );  
         
-       sprintf(guiDataRC,"%d, %11ld, %11ld, %8s, %8s, %8d, %8d, %8d, %8d, %8d, %8s", 
+       sprintf(guiDataRC,"%d, %11ld, %11ld, %8s, %8s, %8d, %8d, %8d, %8d, %8d, %8s %d", 
            mode, current_position -> longitude, current_position -> latitude,cogStr,current_headingStr,apparentWind, 
-           (int)appWindAvg,sheet_percentage,g_gps -> hemisphereSatelites,g_gps->hdop, sogStr);  
+           (int)appWindAvg,sheet_percentage,g_gps -> hemisphereSatelites,g_gps->hdop, sogStr, Output);  
                                                                                                                                                                                                                                                                                               
        Serial.println(guiDataRC);                            
     }                                                            
