@@ -319,7 +319,8 @@ void parsePiData(char charArray[]){
      tack(weather,starboard);
    }
    else if(parsedData[0].equalsIgnoreCase("GYBE")){
-     //TODO
+     boolean starboard = parsedData[1].toInt();
+     gybe(starboard);
    }
 }
 //***********************************************************************************************************************************
@@ -403,7 +404,7 @@ void tack(short weather, boolean starboard) { //based off longDistanceRaceTack f
   int baseRudderTime;
   int preTackRudderAngle;
   
-  Serial.println("$FTack ");
+  Serial.println("$Tack ");
   
   preTackRudderAngle = leewayCor;   //**TODO se this value
   
@@ -418,14 +419,12 @@ void tack(short weather, boolean starboard) { //based off longDistanceRaceTack f
             break;             
   } 
   
-
-  if (!starboard) H = -H;
-   
-  if (starboard) {   
-     preTackRudderAngle =  -preTackRudderAngle;    
-     
+  if (!starboard){
+    H = -H;
   }
-    
+  else {   
+     preTackRudderAngle =  -preTackRudderAngle;        
+  }    
  
   adjust_sheets(95); //power up for the tack
   APM_RC.OutputCh(rudder_output,((preTackRudderAngle*rudder_increment) + rudder_centre));    
@@ -444,6 +443,7 @@ void tack(short weather, boolean starboard) { //based off longDistanceRaceTack f
 }
 
 void updateAverageApparentWindAfterTack(){ 
+  //TODO this function is meant to be used with a 6 sec average
  int apparentCount = 0;
  int apparentTotal = 0;
  long apparentTimer = millis();
@@ -459,10 +459,8 @@ void updateAverageApparentWindAfterTack(){
    }
  }
  apparentWind = apparentTotal/10;
-
  for(int i  = 0; i < 120 ; i++)                           
       averageApprentWind();
-
 
 }
 
@@ -480,4 +478,14 @@ void waitForSpecifiedDuration(int duration){
     timer = millis() - startTimer;
 	checkForRCOverride();
   }
+}
+
+
+void gybe(boolean starboard) {  //based off station_keeping_gybe from 2012
+  int H = 85;
+  if (starboard) H = -H;
+  Serial.println("$GYBE");            
+  adjust_sheets(25);
+  APM_RC.OutputCh(rudder_output, H*rudder_increment + rudder_centre); 
+  waitForSpecifiedDuration(4000);
 }
