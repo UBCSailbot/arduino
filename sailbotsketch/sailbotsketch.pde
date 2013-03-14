@@ -32,7 +32,7 @@ double rudder_increment = 8.97;
 double sheet_end = 1932;
 double sheet_increment = 9.53736;
          
-int leewayCor;
+int leewayCor=5;
   
 enum sailByCourse {  
   compassMethod,
@@ -406,7 +406,7 @@ void tack(short weather, boolean starboard) { //based off longDistanceRaceTack f
   
   Serial.println("$Tack ");
   
-  preTackRudderAngle = leewayCor;   //**TODO se this value
+  preTackRudderAngle = -leewayCor;
   
   switch(weather) {
     case 0: baseRudderTime = 1500;
@@ -464,11 +464,14 @@ void updateAverageApparentWindAfterTack(){
 
 }
 
-void checkForRCOverride(){
-    read_radio();
-    if(pilot_switch < RC_sail) {
-        emergencySail();
-    }
+
+void gybe(boolean starboard) {  //based off station_keeping_gybe from 2012
+  int H = 85;
+  if (starboard) H = -H;
+  Serial.println("$GYBE");            
+  adjust_sheets(25);
+  APM_RC.OutputCh(rudder_output, H*rudder_increment + rudder_centre); 
+  waitForSpecifiedDuration(4000);
 }
 
 void waitForSpecifiedDuration(int duration){
@@ -479,13 +482,10 @@ void waitForSpecifiedDuration(int duration){
 	checkForRCOverride();
   }
 }
-
-
-void gybe(boolean starboard) {  //based off station_keeping_gybe from 2012
-  int H = 85;
-  if (starboard) H = -H;
-  Serial.println("$GYBE");            
-  adjust_sheets(25);
-  APM_RC.OutputCh(rudder_output, H*rudder_increment + rudder_centre); 
-  waitForSpecifiedDuration(4000);
+void checkForRCOverride(){
+    read_radio();
+    if(pilot_switch < RC_sail) {
+        emergencySail();
+    }
 }
+
