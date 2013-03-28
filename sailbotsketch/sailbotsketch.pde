@@ -175,7 +175,7 @@ int readEncoder(){
 }
 
 int convertTo360 (double sensorValue){
-    int result= (int)-1*sensorValue*360/1024;
+    int result= (int)-1*sensorValue*360/1023;
     if(result < -180){
        result += 360;
      }
