@@ -24,7 +24,7 @@
 #define rudder_output 0
 #define sheet_output 1
 #define RC_sail 1200
-#define Read_GUI_Data_Challenge_Finished 1200
+#define RESET_INSTRUCTIONS 1200
 
 
 double rudder_centre = 1519;
@@ -102,10 +102,6 @@ void setup()
 
   Serial.begin(57600, 128, 128); 
   Serial1.begin(57600, 128, 128); 
-  
-  pinMode(A1, INPUT); //encoder pin
-  digitalWrite(A1, HIGH);
-
   g_gps = &g_gps_driver;
   g_gps->init(); 
 
@@ -119,7 +115,7 @@ void setup()
 void loop()
 {
     read_radio();
-    if(pilot_switch < RC_sail || data_input_switch < Read_GUI_Data_Challenge_Finished ) {     // This needs more testing
+    if(pilot_switch < RC_sail) {     // This needs more testing
       mode=RC_MODE;
       rc_sail(); 
     }
@@ -238,6 +234,7 @@ void printTelemetryData(){
    char cogStr[10];
    char current_headingStr[10];
    char sogStr[10];
+   int resetInstructions =(int) (data_input_switch>RESET_INSTRUCTIONS)
    if(millis() - update_timer >= 50) {
   
        update_timer = millis();
@@ -245,9 +242,9 @@ void printTelemetryData(){
        dtostrf(COG, 7, 0,cogStr );     
        dtostrf(current_heading, 7, 1,current_headingStr );  
         
-       sprintf(guiDataRC,"%d, %11ld, %11ld, %8s, %8s, %8d, %8d, %8d, %8d, %8d, %8s, %8d", 
+       sprintf(guiDataRC,"%d, %11ld, %11ld, %8s, %8s, %8d, %8d, %8d, %8d, %8d, %8s, %8d, %d", 
            mode, current_position -> longitude, current_position -> latitude,cogStr,current_headingStr,apparentWind, 
-           (int)appWindAvg,sheet_percentage,g_gps -> hemisphereSatelites,g_gps->hdop, sogStr, (int)Output);  
+           (int)appWindAvg,sheet_percentage,g_gps -> hemisphereSatelites,g_gps->hdop, sogStr, (int)Output,resetInstructions);  
                                                                                                                                                                                                                                                                                               
        Serial.println(guiDataRC);                            
     }                                                            
