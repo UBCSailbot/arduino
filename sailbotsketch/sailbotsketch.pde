@@ -99,6 +99,7 @@ void setup()
 
   delay(500);          //Wait at least 500 milli-seconds for device initialization
   Wire.begin();        // join i2c bus (address optional for master)
+  pinMode(A1, INPUT);
 
   Serial.begin(57600, 128, 128); 
   Serial1.begin(57600, 128, 128); 
@@ -234,7 +235,7 @@ void printTelemetryData(){
    char cogStr[10];
    char current_headingStr[10];
    char sogStr[10];
-   int resetInstructions =(int) (data_input_switch>RESET_INSTRUCTIONS)
+   int resetInstructions =(int) (data_input_switch>RESET_INSTRUCTIONS);
    if(millis() - update_timer >= 50) {
   
        update_timer = millis();
