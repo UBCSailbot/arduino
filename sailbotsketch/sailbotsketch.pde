@@ -100,7 +100,7 @@ void setup()
   delay(500);          //Wait at least 500 milli-seconds for device initialization
   Wire.begin();        // join i2c bus (address optional for master)
   pinMode(A1, INPUT);
-
+  digitalWrite(A1,HIGH);
   Serial.begin(57600, 128, 128); 
   Serial1.begin(57600, 128, 128); 
   g_gps = &g_gps_driver;
