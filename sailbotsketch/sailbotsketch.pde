@@ -71,7 +71,7 @@ int numberSatelites;
 long update_timer = 0;
 long windTimer = 0;
 long gpsTimer = 0;
-
+const int  ENCODER_OFFSET=37;//this is the absolute offset
 struct Waypoint{
   long latitude;
   long longitude;
@@ -165,7 +165,7 @@ void update_ApprentWind(void)  {
 
 //from http://rpg.dosmage.net/project/sailboat/_m_a3_8pde_source.html
 int readEncoder(){
-   const int  MA3_OFFSET=0;//this is the absolute offset
+
    double sensorValue = analogRead(A1);
    int degreeValue = convertTo360(sensorValue);
    return degreeValue;
@@ -173,10 +173,11 @@ int readEncoder(){
 
 int convertTo360 (double sensorValue){
     int result= (int)-1*sensorValue*360/1023;
+    result+=ENCODER_OFFSET;
     if(result < -180){
        result += 360;
      }
-     return result;
+     return -result;
 }
 
 void averageApprentWind() {
