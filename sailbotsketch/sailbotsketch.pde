@@ -32,7 +32,6 @@ double rudder_increment = 8.97;
 double sheet_end = 1932;
 double sheet_increment = 9.53736;
          
-int leewayCor=5;
   
 enum sailByCourse {  
   compassMethod,
@@ -401,11 +400,7 @@ void tack(short weather, boolean starboard) { //based off longDistanceRaceTack f
   int tack_rudder_angle=80; //average value from last year
   int H = ((double)tack_rudder_angle/100)*45;   
   int baseRudderTime;
-  int preTackRudderAngle;
-  
-  Serial.println("$Tack ");
-  
-  preTackRudderAngle = -leewayCor;
+  int preTackRudderAngle=5;
   
   switch(weather) {
     case 0: baseRudderTime = 1500;
@@ -435,8 +430,6 @@ void tack(short weather, boolean starboard) { //based off longDistanceRaceTack f
 
   APM_RC.OutputCh(rudder_output, ((1.2*H*rudder_increment) + rudder_centre)); 
   waitForSpecifiedDuration(baseRudderTime*2);
-  
-  waitForSpecifiedDuration(baseRudderTime);
  
   updateAverageApparentWindAfterTack();
 }
@@ -467,7 +460,6 @@ void updateAverageApparentWindAfterTack(){
 void gybe(boolean starboard) {  //based off station_keeping_gybe from 2012
   int H = 85;
   if (starboard) H = -H;
-  Serial.println("$GYBE");            
   adjust_sheets(25);
   APM_RC.OutputCh(rudder_output, H*rudder_increment + rudder_centre); 
   waitForSpecifiedDuration(4000);
