@@ -66,6 +66,7 @@ double SOG;
 int apparentWind = 0;
 double appWindAvg=0;
 int numberSatelites;
+int rudderAngle=0;
 
 long update_timer = 0;
 long windTimer = 0;
@@ -223,7 +224,8 @@ void rc_sail() {
    
    rcSheetPercent = (sheet_end - radio_in[sheet_output])/sheet_increment;
    sheet_percentage = pow(rcSheetPercent,0.625) * 5.62 ;
-   
+   rudderAngle=(radio_in[rudder_output]- rudder_centre)/rudder_increment;
+
    update_GPS();
    update_ApprentWind();
    printTelemetryData();       
@@ -245,7 +247,7 @@ void printTelemetryData(){
         
        sprintf(guiDataRC,"%d, %11ld, %11ld, %8s, %8s, %8d, %8d, %8d, %8d, %8d, %8s, %8d, %d", 
            mode, current_position -> longitude, current_position -> latitude,cogStr,current_headingStr,apparentWind, 
-           (int)appWindAvg,sheet_percentage,g_gps -> hemisphereSatelites,g_gps->hdop, sogStr, (int)Output,resetInstructions);  
+           (int)appWindAvg,sheet_percentage,g_gps -> hemisphereSatelites,g_gps->hdop, sogStr, rudderAngle,resetInstructions);  
                                                                                                                                                                                                                                                                                               
        Serial.println(guiDataRC);                            
     }                                                            
@@ -332,7 +334,7 @@ void initPID() {
   double ki = 0.05;
   double kd = 0;
   double pidInterval = 200;
-  
+  Output=0;
   rudder.SetOutputLimits(-rudderLimit,rudderLimit);
   rudder.SetTunings(kp, ki, kd);                     //set PID Constants    
   rudder.SetSampleTime(pidInterval);   
@@ -351,6 +353,7 @@ void adjust_sheets(int sheet_percent) {
 void steer() {
   calculate_PID_input(sailByCourse);
   rudder.Compute();          //PID calculates rudder Output correction
+  rudderAngle=Output;
   APM_RC.OutputCh(rudder_output, Output*rudder_increment + rudder_centre);
 }
 
@@ -419,16 +422,19 @@ void tack(short weather, boolean starboard) { //based off longDistanceRaceTack f
   else {   
      preTackRudderAngle =  -preTackRudderAngle;        
   }    
- 
-  adjust_sheets(95); //power up for the tack
-  APM_RC.OutputCh(rudder_output,((preTackRudderAngle*rudder_increment) + rudder_centre));    
+  sheet_percentage=95;
+  adjust_sheets(sheet_percentage); //power up for the tack
+  
+  rudderAngle = preTackRudderAngle;
+  APM_RC.OutputCh(rudder_output,(preTackRudderAngle*rudder_increment + rudder_centre));    
   waitForSpecifiedDuration(2000);
 
-
-  APM_RC.OutputCh(rudder_output,((0.5*H*rudder_increment) + rudder_centre));  
+  rudderAngle=0.5*H;
+  APM_RC.OutputCh(rudder_output,(rudderAngle*rudder_increment + rudder_centre));  
   waitForSpecifiedDuration(baseRudderTime);
 
-  APM_RC.OutputCh(rudder_output, ((1.2*H*rudder_increment) + rudder_centre)); 
+  rudderAngle =1.2*H;
+  APM_RC.OutputCh(rudder_output, (rudderAngle*rudder_increment + rudder_centre)); 
   waitForSpecifiedDuration(baseRudderTime*2);
  
   updateAverageApparentWindAfterTack();
@@ -470,8 +476,11 @@ void waitForSpecifiedDuration(int duration){
   long startTimer = millis();
   while(timer < duration){  
     timer = millis() - startTimer;
-	checkForRCOverride();
-  }
+    checkForRCOverride();
+    update_GPS();
+    update_ApprentWind();  
+    printTelemetryData();
+    }
 }
 void checkForRCOverride(){
     read_radio();
