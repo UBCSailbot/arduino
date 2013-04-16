@@ -466,8 +466,10 @@ void updateAverageApparentWindAfterTack(){
 void gybe(boolean starboard) {  //based off station_keeping_gybe from 2012
   int H = 85;
   if (starboard) H = -H;
-  adjust_sheets(25);
-  APM_RC.OutputCh(rudder_output, H*rudder_increment + rudder_centre); 
+  rudderAngle=H;
+  sheet_percentage=25;
+  adjust_sheets(sheet_percentage);
+  APM_RC.OutputCh(rudder_output, rudderAngle*rudder_increment + rudder_centre); 
   waitForSpecifiedDuration(4000);
 }
 
