@@ -53,7 +53,8 @@ int sheet_setting[8][4] = {
 int mode;
 enum{RC_MODE, AUTO_MODE};
 int sheet_percentage=0;
-String parsedData[5];
+const int PARSED_DATA_COUNT = 5;
+String parsedData[PARSED_DATA_COUNT];
 int sailByCourse;          
 
 double Setpoint,Input,Output; //PID variables 
@@ -293,11 +294,9 @@ void parsePiData(char charArray[]){
    char field [ 32 ]; //arbitrary 32 char limit
    int n;
 
-   for (int count=0; sscanf(ptr, "%31[^,]%n", field, &n) == 1; count++)
+   for (int count=0; sscanf(ptr, "%31[^,]%n", field, &n) == 1 && count<PARSED_DATA_COUNT ; count++)
    {
-      //Serial.println(field);
-      parsedData[count]=field;
-      
+      parsedData[count]=field;     
       ptr += n; /* advance the pointer by the number of characters read */
       if ( *ptr != ',' )
       {
@@ -377,6 +376,7 @@ void calculate_PID_input(int sailByCourse) {
     break;      
 
     }    
+    
     
     if (difference > 180 || difference < -180) {
         if (difference < 0) {
