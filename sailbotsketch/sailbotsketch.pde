@@ -400,8 +400,8 @@ void calculate_PID_input(int sailByCourse) {
 // TACKING FUNCTIONS
 //***********************************************************************************************************************************
 void tack(short weather, boolean starboard) { //based off longDistanceRaceTack from 2012
-  int tack_rudder_angle=80; //average value from last year
-  int H = ((double)tack_rudder_angle/100)*45;   
+  int tack_rudder_percent=80; //average value from last year
+  int H = ((double)tack_rudder_percent/100)*45;   
   int baseRudderTime;
   int preTackRudderAngle=5;
   
@@ -464,9 +464,8 @@ void updateAverageApparentWindAfterTack(){
 
 
 void gybe(boolean starboard) {  //based off station_keeping_gybe from 2012
-  int H = 85;
-  if (starboard) H = -H;
-  rudderAngle=H;
+  rudderAngle = 45; //maximum degrees
+  if (starboard) rudderAngle = -rudderAngle;
   sheet_percentage=25;
   adjust_sheets(sheet_percentage);
   APM_RC.OutputCh(rudder_output, rudderAngle*rudder_increment + rudder_centre); 
