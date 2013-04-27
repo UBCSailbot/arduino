@@ -27,7 +27,7 @@
 #define RESET_INSTRUCTIONS 1200
 
 
-double rudder_centre = 1519;
+double rudder_centre = 1519+100; //11 degree offset on 2013 rudder
 double rudder_increment = 8.97;
 double sheet_end = 1932;
 double sheet_increment = 9.53736;
