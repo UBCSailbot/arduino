@@ -36,7 +36,8 @@ double sheet_increment = 9.53736;
 enum sailByCourse {  
   compassMethod,
   cogMethod,
-  apparentWindMethod  
+  apparentWindMethod,
+  holdCourseMethod  
 };  
 
 int sheet_setting[8][4] = {
@@ -57,7 +58,8 @@ const int PARSED_DATA_COUNT = 5;
 String parsedData[PARSED_DATA_COUNT];
 int sailByCourse;          
 
-double Setpoint,Input,Output; //PID variables 
+double Input,Output; 
+double Setpoint=0;
 PID rudder(&Input,&Output,&Setpoint,1,0.05,0.25,DIRECT);//used to Initialize PID
 double course;
 double current_heading;
@@ -72,7 +74,7 @@ int rudderAngle=0;
 long update_timer = 0;
 long windTimer = 0;
 long gpsTimer = 0;
-const int  ENCODER_OFFSET=37;//this is the absolute offset
+int  ENCODER_OFFSET=-175;
 struct Waypoint{
   long latitude;
   long longitude;
@@ -122,6 +124,9 @@ void loop()
       rc_sail(); 
     }
     else{
+    if (mode==RC_MODE){ //reset PID when switched into Auto
+        sailByCourse=holdCourseMethod;//garbage value to stop PID From running
+      }
       mode=AUTO_MODE;
       pi_sail();
     }
@@ -166,8 +171,8 @@ void update_ApprentWind(void)  {
 
 //from http://rpg.dosmage.net/project/sailboat/_m_a3_8pde_source.html
 int readEncoder(){
-
    double sensorValue = analogRead(A1);
+   //Serial.println(sensorValue);
    int degreeValue = convertTo360(sensorValue);
    return degreeValue;
 }
@@ -330,10 +335,9 @@ void initPID() {
   //**TODO** test these constants
   int  rudderLimit=20;
   double kp = 1.2;
-  double ki = 0.05;
+  double ki = 0;
   double kd = 0;
   double pidInterval = 200;
-  Output=0;
   rudder.SetOutputLimits(-rudderLimit,rudderLimit);
   rudder.SetTunings(kp, ki, kd);                     //set PID Constants    
   rudder.SetSampleTime(pidInterval);   
@@ -361,7 +365,7 @@ void steer() {
 
 void calculate_PID_input(int sailByCourse) {
 
-    int difference; 
+    int difference=0; 
     Input = 0;
        
     switch(sailByCourse) {
@@ -373,8 +377,7 @@ void calculate_PID_input(int sailByCourse) {
     break;
  
     case apparentWindMethod: difference = appWindAvg - course;
-    break;      
-
+    break;    
     }    
     
     
@@ -385,13 +388,11 @@ void calculate_PID_input(int sailByCourse) {
         else {
             difference -= 360;
         }
-        Setpoint = 0;
         Input -= difference;    
-        }
-        else {
-            Setpoint = 0;
-            Input -= difference;        
-        }        
+       }
+    else {
+       Input -= difference;        
+    }        
 }
 
 
