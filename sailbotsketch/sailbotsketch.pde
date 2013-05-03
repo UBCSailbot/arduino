@@ -74,7 +74,7 @@ int rudderAngle=0;
 long update_timer = 0;
 long windTimer = 0;
 long gpsTimer = 0;
-int  ENCODER_OFFSET=-175;
+int  ENCODER_OFFSET=-179;
 struct Waypoint{
   long latitude;
   long longitude;
@@ -182,8 +182,12 @@ int convertTo360 (double sensorValue){
     result+=ENCODER_OFFSET;
     if(result < -180){
        result += 360;
-     }
-     return -result;
+    }
+     
+    if(result > 180){
+       result = 180;
+    }    
+    return -result;
 }
 
 void averageApprentWind() {
