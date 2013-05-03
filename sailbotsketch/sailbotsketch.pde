@@ -195,14 +195,15 @@ int convertTo360 (double sensorValue){
 
 void averageApprentWind() {
   //**TODO
-  int diff = abs(appWindAvg-apparentWind);
-  if (diff>=180 && appWindAvg<apparentWind){
+  int currentWind=apparentWind;
+  int diff = abs(appWindAvg-currentWind);
+  if (diff>=180 && appWindAvg<currentWind){
     appWindAvg+=360;
   }
-  else if (diff>=180 && appWindAvg>apparentWind){
-    apparentWind+=360;
+  else if (diff>=180 && appWindAvg>currentWind){
+    currentWind+=360;
   }
-  appWindAvg=0.999*(double)appWindAvg+0.001*(double)apparentWind;
+  appWindAvg=0.999*(double)appWindAvg+0.001*(double)currentWind;
   if (appWindAvg>180){
     appWindAvg-=360;
   }
