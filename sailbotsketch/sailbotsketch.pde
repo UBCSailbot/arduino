@@ -183,13 +183,6 @@ int convertTo360 (double sensorValue){
     if(result < -180){
        result += 360;
     }
-     
-    if(result > 180){
-       result = 180;
-    }
-    if (result <-180){
-      result = -180;
-    }    
     return -result;
 }
 
