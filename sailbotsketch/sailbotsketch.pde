@@ -74,7 +74,7 @@ int rudderAngle=0;
 long update_timer = 0;
 long windTimer = 0;
 long gpsTimer = 0;
-int  ENCODER_OFFSET=-179;
+int  ENCODER_OFFSET=-161;
 struct Waypoint{
   long latitude;
   long longitude;
