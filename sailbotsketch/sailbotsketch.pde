@@ -68,6 +68,7 @@ int intSOG;
 double SOG;
 int apparentWind = 0;
 double appWindAvg=0;
+double DEFAULT_WIND_AVERAGE_CONSTANT = .999;
 int numberSatelites;
 int rudderAngle=0;
 
@@ -165,8 +166,7 @@ void update_GPS(void)
 void update_ApprentWind(void)  {
 
   apparentWind = readEncoder();
-  averageApprentWind();
-  
+  averageApprentWind(DEFAULT_WIND_AVERAGE_CONSTANT);
 }
 
 //from http://rpg.dosmage.net/project/sailboat/_m_a3_8pde_source.html
@@ -186,7 +186,7 @@ int convertTo360 (double sensorValue){
     return -result;
 }
 
-void averageApprentWind() {
+void averageApprentWind(double k) {
   //**TODO
   int currentWind=apparentWind;
   int diff = abs(appWindAvg-currentWind);
@@ -196,7 +196,7 @@ void averageApprentWind() {
   else if (diff>=180 && appWindAvg>currentWind){
     currentWind+=360;
   }
-  appWindAvg=0.999*(double)appWindAvg+0.001*(double)currentWind;
+  appWindAvg=k*(double)appWindAvg+(1-k)*(double)currentWind;
   if (appWindAvg>180){
     appWindAvg-=360;
   }
@@ -443,24 +443,20 @@ void tack(short weather, boolean starboard) { //based off longDistanceRaceTack f
 }
 
 void updateAverageApparentWindAfterTack(){ 
-  //TODO this function is meant to be used with a 6 sec average
- int apparentCount = 0;
- int apparentTotal = 0;
- long apparentTimer = millis();
-  
- while(apparentCount < 10) {
-   
-   if(millis() - apparentTimer >= 50) {
-     
-      update_ApprentWind(); 
-      apparentTotal += apparentWind;
-      apparentCount++;
-      apparentTimer = millis();
+//this function artificially updates the average wind quickly to make up for the apparent wind change after the maneuver
+  double TACKING_WIND_AVERAGE_CONSTANT =.99;
+  long apparentTimer = millis();
+    
+  for(int i=0;i<10;i++) {
+    
+     if(millis() - apparentTimer >= 50) {
+        update_ApprentWind(); 
+        apparentTimer = millis();
+     }
+     averageApprentWind(TACKING_WIND_AVERAGE_CONSTANT);
    }
- }
- apparentWind = apparentTotal/10;
- for(int i  = 0; i < 120 ; i++)                           
-      averageApprentWind();
+
+
 
 }
 
@@ -472,6 +468,7 @@ void gybe(boolean starboard) {  //based off station_keeping_gybe from 2012
   adjust_sheets(sheet_percentage);
   APM_RC.OutputCh(rudder_output, rudderAngle*rudder_increment + rudder_centre); 
   waitForSpecifiedDuration(4000);
+  updateAverageApparentWindAfterTack();
 }
 
 void waitForSpecifiedDuration(int duration){
