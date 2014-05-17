@@ -30,8 +30,10 @@
 double rudder_centre = 1519+100; //11 degree offset on 2013 rudder
 double rudder_increment = 8.97;
 double sheet_end = 1932;
+//double sheet_increment = 9.53736;
 double sheet_increment = 9.53736;
-         
+double sheet_fully_in = 1319;
+int altRcPercent = 0;       
   
 enum sailByCourse {  
   compassMethod,
@@ -113,6 +115,8 @@ void setup()
   APM_RC.Init();                        // Radio Initialization
   pilot_switch = 968;
   initPID();
+  sheet_increment = (sheet_end - sheet_fully_in)/100.0;
+  
 }
 
 //***********************************************************************************************************************************
@@ -143,7 +147,11 @@ void read_radio(void)
         
         data_input_switch = radio_in[2];
         pilot_switch = radio_in[3]; 
-
+        
+        if(radio_in[sheet_output] < sheet_fully_in)
+        {
+          radio_in[sheet_output] = sheet_fully_in;
+        }
 }
 
 //***********************************************************************************************************************************
@@ -256,7 +264,18 @@ void printTelemetryData(){
            mode, current_position -> longitude, current_position -> latitude,cogStr,current_headingStr,apparentWind, 
            (int)appWindAvg,sheet_percentage,g_gps -> hemisphereSatelites,g_gps->hdop, sogStr, rudderAngle,resetInstructions);  
                                                                                                                                                                                                                                                                                               
-       Serial.println(guiDataRC);                            
+//       Serial.println(guiDataRC);         
+        char debug[200];
+        sprintf(debug, "RC Pilot: %8d", pilot_switch);
+        Serial.println(debug);
+        sprintf(debug, "radio_in[sheet_output]: %8d", radio_in[sheet_output]);
+        Serial.println(debug);
+        sprintf(debug, "sheet_percentage: %8d", sheet_percentage);
+        Serial.println(debug);
+        
+//        rcSheetPercent = (sheet_end - radio_in[sheet_output])/sheet_increment;
+//   sheet_percentage = pow(rcSheetPercent,0.625) * 5.62 ;
+//   rudderAngle=(radio_in[rudder_output]- rudder_centre)/rudder_increment;
     }                                                            
 
   
@@ -347,7 +366,7 @@ void initPID() {
 
 
 void adjust_sheets(int sheet_percent) {
-   int altRcPercent;       
+
    altRcPercent = pow( sheet_percent,1.74) * 0.033 ;
    APM_RC.OutputCh(sheet_output,sheet_end - altRcPercent*sheet_increment ); 
 }
