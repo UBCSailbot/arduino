@@ -20,14 +20,11 @@
 #include <avr/pgmspace.h>
 
 
-
 #define rudder_output 0
 #define sheet_output 1
 #define RC_sail 1200
 #define RESET_INSTRUCTIONS 1200
-
-// Analog pin for battery voltage reading
-int battery_voltage_pin = 0;
+#define battery_voltage_pin 0
 
 //======RC Calibration Settings
 
@@ -269,7 +266,7 @@ void printTelemetryData(){
      in the range of 0-1023 (ie. 5V will read as 1023)
      Since our battery voltage is actually above 5V, we use a voltage divider to divide the voltage into 2 before passing it to the arduino
    */
-   battery_voltage = 2*(analogRead(battery_voltage_pin)*(5/1024));
+   battery_voltage = 2*(analogRead(battery_voltage_pin)*(5.0/1024));
    int resetInstructions =(int) (data_input_switch>RESET_INSTRUCTIONS);
    if(millis() - update_timer >= 50) {
   
