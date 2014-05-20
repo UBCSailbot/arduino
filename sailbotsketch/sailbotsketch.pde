@@ -268,7 +268,7 @@ void printTelemetryData(){
      Since our battery voltage is actually above 5V, we use a voltage divider to divide the voltage into 2 before passing it to the arduino
    */
    int battery_voltage_reading = analogRead(battery_voltage_pin);
-   battery_voltage = 2*(battery_voltage_reading*(0.0049));
+   battery_voltage = 2*(battery_voltage_reading*(5.0/1024));
    int resetInstructions =(int) (data_input_switch>RESET_INSTRUCTIONS);
    if(millis() - update_timer >= 50) {
   
