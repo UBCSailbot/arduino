@@ -261,23 +261,26 @@ void printTelemetryData(){
    char cogStr[10];
    char current_headingStr[10];
    char sogStr[10];
+   char volStr[10];
    /*
      The battery voltage is read on the arduino's analog pins, which have a 0-5 voltage range, which is read by the arduino as
      in the range of 0-1023 (ie. 5V will read as 1023)
      Since our battery voltage is actually above 5V, we use a voltage divider to divide the voltage into 2 before passing it to the arduino
    */
-   battery_voltage = 2*(analogRead(battery_voltage_pin)*(5.0/1024));
+   int battery_voltage_reading = analogRead(battery_voltage_pin);
+   battery_voltage = 2*(battery_voltage_reading*(0.0049));
    int resetInstructions =(int) (data_input_switch>RESET_INSTRUCTIONS);
    if(millis() - update_timer >= 50) {
   
        update_timer = millis();
        dtostrf(SOG, 7, 2, sogStr);          
        dtostrf(COG, 7, 0,cogStr );     
-       dtostrf(current_heading, 7, 1,current_headingStr );  
+       dtostrf(current_heading, 7, 1,current_headingStr );
+       dtostrf(battery_voltage, 7, 3, volStr);
         
-       sprintf(guiDataRC,"%d, %11ld, %11ld, %8s, %8s, %8d, %8d, %8d, %8d, %8d, %8s, %8d, %d, %d", 
+       sprintf(guiDataRC,"%d, %11ld, %11ld, %8s, %8s, %8d, %8d, %8d, %8d, %8d, %8s, %8d, %d, %s", 
            mode, current_position -> longitude, current_position -> latitude,cogStr,current_headingStr,apparentWind, 
-           (int)appWindAvg,sheet_percentage,g_gps -> hemisphereSatelites,g_gps->hdop, sogStr, rudderAngle,resetInstructions,battery_voltage);  
+           (int)appWindAvg,sheet_percentage,g_gps -> hemisphereSatelites,g_gps->hdop, sogStr, rudderAngle,resetInstructions,volStr);  
                                                                                                                                                                                                                                                                                               
       Serial.println(guiDataRC);   
     }                                                            
