@@ -20,11 +20,12 @@
 #include <avr/pgmspace.h>
 
 
-
 #define rudder_output 0
 #define sheet_output 1
 #define RC_sail 1200
 #define RESET_INSTRUCTIONS 1200
+
+
 
 //======RC Calibration Settings
 
@@ -36,7 +37,7 @@ double sheet_fully_out = 1932;
 // RC Value when sheets are all the way in
 double sheet_fully_in = 1319;
 double sheet_increment = (sheet_fully_out - sheet_fully_in)/100.0;
-  
+
 enum sailByCourse {  
   compassMethod,
   cogMethod,
@@ -45,18 +46,27 @@ enum sailByCourse {
 };  
 
 int sheet_setting[8][4] = {
-   {95,100,100,100}
-  ,{90,86,86,86}
-  ,{78,73,73,73}
-  ,{57,54,54,54}
-  ,{40,38,38,38}
-  ,{29,29,29,29}
-  ,{25,18,18,18}
-  ,{35,20,20,35}
+  {
+    95,100,100,100  }
+  ,{
+    90,86,86,86  }
+  ,{
+    78,73,73,73  }
+  ,{
+    57,54,54,54  }
+  ,{
+    40,38,38,38  }
+  ,{
+    29,29,29,29  }
+  ,{
+    25,18,18,18  }
+  ,{
+    35,20,20,35  }
 }; 
 
 int mode;
-enum{RC_MODE, AUTO_MODE};
+enum{
+  RC_MODE, AUTO_MODE};
 int sheet_percentage=0;
 const int PARSED_DATA_COUNT = 5;
 String parsedData[PARSED_DATA_COUNT];
@@ -75,6 +85,8 @@ double appWindAvg=0;
 double DEFAULT_WIND_AVERAGE_CONSTANT = .999;
 int numberSatelites;
 int rudderAngle=0;
+double battery_voltage_1;
+double battery_voltage_2;
 
 long update_timer = 0;
 long windTimer = 0;
@@ -107,7 +119,12 @@ void setup()
 
   delay(500);          //Wait at least 500 milli-seconds for device initialization
   Wire.begin();        // join i2c bus (address optional for master)
+  // Pin A1 is the wind sensor
   pinMode(A1, INPUT);
+  // Pin A0 is the voltage reader for the circuit
+  pinMode(A0, INPUT);
+  // Pin A2 is the voltage reader for the winch
+  pinMode(A2, INPUT);
   digitalWrite(A1,HIGH);
   Serial.begin(57600, 128, 128); 
   Serial1.begin(57600, 128, 128); 
@@ -117,65 +134,68 @@ void setup()
   APM_RC.Init();                        // Radio Initialization
   pilot_switch = 968;
   initPID();
-  
+
+
 }
 
 //***********************************************************************************************************************************
 
 void loop()
 {
-    read_radio();
-    if(pilot_switch < RC_sail) {     // This needs more testing
-      mode=RC_MODE;
-      rc_sail(); 
-    }
-    else{
+  read_radio();
+  
+  
+  if(pilot_switch < RC_sail) {     // This needs more testing
+    mode=RC_MODE;
+    rc_sail(); 
+  }
+  else{
     if (mode==RC_MODE){ //reset PID when switched into Auto
-        sailByCourse=holdCourseMethod;//garbage value to stop PID From running
-      }
-      mode=AUTO_MODE;
-      pi_sail();
+      sailByCourse=holdCourseMethod;//garbage value to stop PID From running
     }
- 
+    mode=AUTO_MODE;
+    pi_sail();
+  }
+
 }
 
 //***********************************************************************************************************************************
 
 void read_radio(void)
 {   
-        for (int y = 0; y < 4; y++)  
-            radio_in[y] = APM_RC.InputCh(y);    
-        
-        data_input_switch = radio_in[2];
-        pilot_switch = radio_in[3]; 
-        
-        // Cap at sheet_fully_out if it tries to go over
-        if(radio_in[sheet_output] > sheet_fully_out)
-        {
-          radio_in[sheet_output] = sheet_fully_out;
-        }
+  for (int y = 0; y < 4; y++)  
+    radio_in[y] = APM_RC.InputCh(y);    
 
-        // Cap at sheet_fully_in if it tries to go under
-        if(radio_in[sheet_output] < sheet_fully_in)
-        {
-          radio_in[sheet_output] = sheet_fully_in;
-        }
+  data_input_switch = radio_in[2];
+  pilot_switch = radio_in[3]; 
+
+  // Cap at sheet_fully_out if it tries to go over
+  if(radio_in[sheet_output] > sheet_fully_out)
+  {
+    radio_in[sheet_output] = sheet_fully_out;
+  }
+
+  // Cap at sheet_fully_in if it tries to go under
+  if(radio_in[sheet_output] < sheet_fully_in)
+  {
+    radio_in[sheet_output] = sheet_fully_in;
+  }
 }
 
 //***********************************************************************************************************************************
 
 void update_GPS(void)
 {
-    
-    g_gps->update();
-    current_position -> latitude = g_gps->latitude;
-    current_position -> longitude = g_gps->longitude;  
-    COG = ((double)(g_gps -> ground_course ))/100;
-    intSOG = (int)g_gps->ground_speed; // in cm/s
-    SOG = ((double)intSOG)/100;
-    current_heading = ((double)(g_gps -> true_heading))/100; 
-    numberSatelites = g_gps -> hemisphereSatelites;  
- 
+
+  g_gps->update();
+  current_position -> latitude = g_gps->latitude;
+  current_position -> longitude = g_gps->longitude;  
+  COG = ((double)(g_gps -> ground_course ))/100;
+  intSOG = (int)g_gps->ground_speed; // in cm/s
+  SOG = ((double)intSOG)/100;
+  current_heading = ((double)(g_gps -> true_heading))/100; 
+  numberSatelites = g_gps -> hemisphereSatelites;  
+
 }
 
 //***********************************************************************************************************************************
@@ -187,19 +207,19 @@ void update_ApprentWind(void)  {
 
 //from http://rpg.dosmage.net/project/sailboat/_m_a3_8pde_source.html
 int readEncoder(){
-   double sensorValue = analogRead(A1);
-   //Serial.println(sensorValue);
-   int degreeValue = convertTo360(sensorValue);
-   return degreeValue;
+  double sensorValue = analogRead(A1);
+  //Serial.println(sensorValue);
+  int degreeValue = convertTo360(sensorValue);
+  return degreeValue;
 }
 
 int convertTo360 (double sensorValue){
-    int result= (int)-1*sensorValue*360/1023;
-    result+=ENCODER_OFFSET;
-    if(result < -180){
-       result += 360;
-    }
-    return -result;
+  int result= (int)-1*sensorValue*360/1023;
+  result+=ENCODER_OFFSET;
+  if(result < -180){
+    result += 360;
+  }
+  return -result;
 }
 
 void averageApprentWind(double k) {
@@ -227,9 +247,9 @@ void averageApprentWind(double k) {
 //***********************************************************************************************************************************
 void emergencySail() {
   while(pilot_switch < RC_sail) {
-     read_radio();   
-     APM_RC.OutputCh(rudder_output, radio_in[rudder_output]);           
-     APM_RC.OutputCh(sheet_output, radio_in[sheet_output]);   
+    read_radio();   
+    APM_RC.OutputCh(rudder_output, radio_in[rudder_output]);           
+    APM_RC.OutputCh(sheet_output, radio_in[sheet_output]);   
   }  
 }
 
@@ -238,117 +258,133 @@ void emergencySail() {
 //***********************************************************************************************************************************
 
 void rc_sail() {
-  
-   float rcSheetPercent;  
-   
-   read_radio();   
-   APM_RC.OutputCh(rudder_output, radio_in[rudder_output]);           
-   APM_RC.OutputCh(sheet_output, radio_in[sheet_output]);   
-   
-   rcSheetPercent = (sheet_fully_out - radio_in[sheet_output])/sheet_increment;
-   sheet_percentage = pow(rcSheetPercent,0.625) * 5.62 ;
-   rudderAngle=(radio_in[rudder_output]- rudder_centre)/rudder_increment;
 
-   update_GPS();
-   update_ApprentWind();
-   printTelemetryData();       
-            
+  float rcSheetPercent;  
+
+  read_radio();   
+  APM_RC.OutputCh(rudder_output, radio_in[rudder_output]);           
+  APM_RC.OutputCh(sheet_output, radio_in[sheet_output]);   
+
+  rcSheetPercent = (sheet_fully_out - radio_in[sheet_output])/sheet_increment;
+  sheet_percentage = pow(rcSheetPercent,0.625) * 5.62 ;
+  rudderAngle=(radio_in[rudder_output]- rudder_centre)/rudder_increment;
+
+  update_GPS();
+  update_ApprentWind();
+  printTelemetryData();       
+
 }
 
 void printTelemetryData(){
-   char guiDataRC[200]; 
-   char cogStr[10];
-   char current_headingStr[10];
-   char sogStr[10];
-   int resetInstructions =(int) (data_input_switch>RESET_INSTRUCTIONS);
-   if(millis() - update_timer >= 50) {
-  
-       update_timer = millis();
-       dtostrf(SOG, 7, 2, sogStr);          
-       dtostrf(COG, 7, 0,cogStr );     
-       dtostrf(current_heading, 7, 1,current_headingStr );  
-        
-       sprintf(guiDataRC,"%d, %11ld, %11ld, %8s, %8s, %8d, %8d, %8d, %8d, %8d, %8s, %8d, %d", 
-           mode, current_position -> longitude, current_position -> latitude,cogStr,current_headingStr,apparentWind, 
-           (int)appWindAvg,sheet_percentage,g_gps -> hemisphereSatelites,g_gps->hdop, sogStr, rudderAngle,resetInstructions);  
-                                                                                                                                                                                                                                                                                              
-      Serial.println(guiDataRC);   
-    }                                                            
+  char guiDataRC[200]; 
+  char cogStr[10];
+  char current_headingStr[10];
+  char sogStr[10];
+  char battery_voltage_string_1[10];
+  char battery_voltage_string_2[10];
 
-  
+
+  int resetInstructions =(int) (data_input_switch>RESET_INSTRUCTIONS);
+  if(millis() - update_timer >= 50) {
+
+     /*
+       The battery voltage is read on the arduino's analog pins, which have a 0-5 voltage range, which is read by the arduino as
+       in the range of 0-1023 (ie. 5V will read as 1023)
+       Since our battery voltage is actually above 5V, we use a voltage divider to divide the voltage into 2 before passing it to the arduino
+     */
+    int battery_voltage_reading_1 = analogRead(A0);
+    int battery_voltage_reading_2 = analogRead(A2);
+    battery_voltage_1 = 2*(battery_voltage_reading_1*(5.0/1024));
+    battery_voltage_2 = 2*(battery_voltage_reading_2*(5.0/1024));
+    
+    update_timer = millis();
+    dtostrf(SOG, 7, 2, sogStr);          
+    dtostrf(COG, 7, 0,cogStr );     
+    dtostrf(current_heading, 7, 1,current_headingStr );
+    dtostrf(battery_voltage_1, 7, 3, battery_voltage_string_1);
+    dtostrf(battery_voltage_2, 7, 3, battery_voltage_string_2);
+
+    sprintf(guiDataRC,"%d, %11ld, %11ld, %8s, %8s, %8d, %8d, %8d, %8d, %8d, %8s, %8d, %d, %d, %d", 
+    mode, current_position -> longitude, current_position -> latitude,cogStr,current_headingStr,apparentWind, 
+    (int)appWindAvg,sheet_percentage,g_gps -> hemisphereSatelites,g_gps->hdop, sogStr, rudderAngle,resetInstructions,battery_voltage_reading_1, battery_voltage_reading_2);  
+
+    Serial.println(guiDataRC);   
+  }                                                            
+
+
 }
 //***********************************************************************************************************************************
 
 void pi_sail() {
-  
+
   read_data_fromPi();
   update_GPS();
   update_ApprentWind();  
   printTelemetryData();
-  
+
   adjust_sheets(sheet_percentage);
   steer();
 }
 
- 
+
 //***********************************************************************************************************************************
 
 void read_data_fromPi () {
 
-   #define INLENGTH 250
-   char inString[INLENGTH + 1] ;
-   int inCount; 
-   inCount = 0;
-   while(Serial.available() > 0)  {                                                 
-     inString[inCount++] = Serial.read();                                           
-     delay(2);   // Changed from 1 May 17, 2012 by JK. 
-   }
-   inString[inCount] = '\0';
-   if (inCount>1){
-     parsePiData(inString);
-   }
+#define INLENGTH 250
+  char inString[INLENGTH + 1] ;
+  int inCount; 
+  inCount = 0;
+  while(Serial.available() > 0)  {                                                 
+    inString[inCount++] = Serial.read();                                           
+    delay(2);   // Changed from 1 May 17, 2012 by JK. 
+  }
+  inString[inCount] = '\0';
+  if (inCount>1){
+    parsePiData(inString);
+  }
 
 }
 
 
 void parsePiData(char charArray[]){
-   const char *ptr = charArray;
-   char field [ 32 ]; //arbitrary 32 char limit
-   int n;
+  const char *ptr = charArray;
+  char field [ 32 ]; //arbitrary 32 char limit
+  int n;
 
-   for (int count=0; sscanf(ptr, "%31[^,]%n", field, &n) == 1 && count<PARSED_DATA_COUNT ; count++)
-   {
-      parsedData[count]=field;     
-      ptr += n; /* advance the pointer by the number of characters read */
-      if ( *ptr != ',' )
-      {
-         break; /* didn't find an expected delimiter, done? */
-      }
-      ++ptr; /* skip the delimiter */
-   }
-   
-   if(parsedData[0].equalsIgnoreCase("ADJUST_SHEETS")){
-     sheet_percentage=parsedData[1].toInt();
-   }
-   else if(parsedData[0].equalsIgnoreCase("STEER")){
+  for (int count=0; sscanf(ptr, "%31[^,]%n", field, &n) == 1 && count<PARSED_DATA_COUNT ; count++)
+  {
+    parsedData[count]=field;     
+    ptr += n; /* advance the pointer by the number of characters read */
+    if ( *ptr != ',' )
+    {
+      break; /* didn't find an expected delimiter, done? */
+    }
+    ++ptr; /* skip the delimiter */
+  }
+
+  if(parsedData[0].equalsIgnoreCase("ADJUST_SHEETS")){
+    sheet_percentage=parsedData[1].toInt();
+  }
+  else if(parsedData[0].equalsIgnoreCase("STEER")){
     sailByCourse = parsedData[1].toInt();
     course = parsedData[2].toInt();
-   }
-   else if(parsedData[0].equalsIgnoreCase("TACK")){
-     short weather = parsedData[1].toInt();
-     boolean starboard = parsedData[2].toInt();
-     tack(weather,starboard);
-   }
-   else if(parsedData[0].equalsIgnoreCase("GYBE")){
-     boolean starboard = parsedData[1].toInt();
-     gybe(starboard);
-   }
+  }
+  else if(parsedData[0].equalsIgnoreCase("TACK")){
+    short weather = parsedData[1].toInt();
+    boolean starboard = parsedData[2].toInt();
+    tack(weather,starboard);
+  }
+  else if(parsedData[0].equalsIgnoreCase("GYBE")){
+    boolean starboard = parsedData[1].toInt();
+    gybe(starboard);
+  }
 }
 //***********************************************************************************************************************************
 void initPID() {
-  
+
   rudder.SetMode(AUTOMATIC);
-  
+
   //**TODO** test these constants
   int  rudderLimit=20;
   double kp = 1.2;
@@ -358,14 +394,14 @@ void initPID() {
   rudder.SetOutputLimits(-rudderLimit,rudderLimit);
   rudder.SetTunings(kp, ki, kd);                     //set PID Constants    
   rudder.SetSampleTime(pidInterval);   
-  
+
 }
 
 
 void adjust_sheets(int sheet_percent) {
   int altRcPercent;
-   altRcPercent = pow( sheet_percent,1.74) * 0.033 ;
-   APM_RC.OutputCh(sheet_output, sheet_fully_out - altRcPercent*sheet_increment ); 
+  altRcPercent = pow( sheet_percent,1.74) * 0.033 ;
+  APM_RC.OutputCh(sheet_output, sheet_fully_out - altRcPercent*sheet_increment ); 
 }
 
 //***********************************************************************************************************************************
@@ -382,34 +418,37 @@ void steer() {
 
 void calculate_PID_input(int sailByCourse) {
 
-    int difference=0; 
-    Input = 0;
-       
-    switch(sailByCourse) {
-   
-    case compassMethod: difference = course - current_heading;
+  int difference=0; 
+  Input = 0;
+
+  switch(sailByCourse) {
+
+  case compassMethod: 
+    difference = course - current_heading;
     break;
-    
-    case cogMethod: difference = course - COG;
+
+  case cogMethod: 
+    difference = course - COG;
     break;
- 
-    case apparentWindMethod: difference = appWindAvg - course;
+
+  case apparentWindMethod: 
+    difference = appWindAvg - course;
     break;    
-    }    
-    
-    
-    if (difference > 180 || difference < -180) {
-        if (difference < 0) {
-            difference += 360;
-        }
-        else {
-            difference -= 360;
-        }
-        Input -= difference;    
-       }
+  }    
+
+
+  if (difference > 180 || difference < -180) {
+    if (difference < 0) {
+      difference += 360;
+    }
     else {
-       Input -= difference;        
-    }        
+      difference -= 360;
+    }
+    Input -= difference;    
+  }
+  else {
+    Input -= difference;        
+  }        
 }
 
 
@@ -422,27 +461,31 @@ void tack(short weather, boolean starboard) { //based off longDistanceRaceTack f
   int H = ((double)tack_rudder_percent/100)*45;   
   int baseRudderTime;
   int preTackRudderAngle=5;
-  
+
   switch(weather) {
-    case 0: baseRudderTime = 1500;
-            break;  
-    case 1: baseRudderTime = 1300;
-            break;          
-    case 2: baseRudderTime = 1200;
-            break;
-    case 3: baseRudderTime = 1100;
-            break;             
+  case 0: 
+    baseRudderTime = 1500;
+    break;  
+  case 1: 
+    baseRudderTime = 1300;
+    break;          
+  case 2: 
+    baseRudderTime = 1200;
+    break;
+  case 3: 
+    baseRudderTime = 1100;
+    break;             
   } 
-  
+
   if (!starboard){
     H = -H;
   }
   else {   
-     preTackRudderAngle =  -preTackRudderAngle;        
+    preTackRudderAngle =  -preTackRudderAngle;        
   }    
   sheet_percentage=95;
   adjust_sheets(sheet_percentage); //power up for the tack
-  
+
   rudderAngle = preTackRudderAngle;
   APM_RC.OutputCh(rudder_output,(preTackRudderAngle*rudder_increment + rudder_centre));    
   waitForSpecifiedDuration(2000);
@@ -454,23 +497,23 @@ void tack(short weather, boolean starboard) { //based off longDistanceRaceTack f
   rudderAngle =1.2*H;
   APM_RC.OutputCh(rudder_output, (rudderAngle*rudder_increment + rudder_centre)); 
   waitForSpecifiedDuration(baseRudderTime*2);
- 
+
   updateAverageApparentWindAfterTack();
 }
 
 void updateAverageApparentWindAfterTack(){ 
-//this function artificially updates the average wind quickly to make up for the apparent wind change after the maneuver
+  //this function artificially updates the average wind quickly to make up for the apparent wind change after the maneuver
   double TACKING_WIND_AVERAGE_CONSTANT =.99;
   long apparentTimer = millis();
-    
+
   for(int i=0;i<10;i++) {
-    
-     if(millis() - apparentTimer >= 50) {
-        update_ApprentWind(); 
-        apparentTimer = millis();
-     }
-     averageApprentWind(TACKING_WIND_AVERAGE_CONSTANT);
-   }
+
+    if(millis() - apparentTimer >= 50) {
+      update_ApprentWind(); 
+      apparentTimer = millis();
+    }
+    averageApprentWind(TACKING_WIND_AVERAGE_CONSTANT);
+  }
 
 
 
@@ -496,12 +539,13 @@ void waitForSpecifiedDuration(int duration){
     update_GPS();
     update_ApprentWind();  
     printTelemetryData();
-    }
+  }
 }
 void checkForRCOverride(){
-    read_radio();
-    if(pilot_switch < RC_sail) {
-        emergencySail();
-    }
+  read_radio();
+  if(pilot_switch < RC_sail) {
+    emergencySail();
+  }
 }
+
 
