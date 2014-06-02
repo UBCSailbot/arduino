@@ -294,8 +294,8 @@ void printTelemetryData(){
      */
     int battery_voltage_reading_1 = analogRead(A0);
     int battery_voltage_reading_2 = analogRead(A2);
-    battery_voltage_1 = 2*(battery_voltage_reading_1*(5.0/1024));
-    battery_voltage_2 = 2*(battery_voltage_reading_2*(5.0/1024));
+    battery_voltage_1 = 2*(battery_voltage_reading_1/1024.0)*5.0;
+    battery_voltage_2 = 2*(battery_voltage_reading_2/1024.0)*5.0;
     
     update_timer = millis();
     dtostrf(SOG, 7, 2, sogStr);          
