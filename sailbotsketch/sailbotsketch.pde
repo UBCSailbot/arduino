@@ -36,6 +36,7 @@ double rudder_increment = 8.97;
 double sheet_fully_out = 1932;
 // RC Value when sheets are all the way in
 double sheet_fully_in = 1319;
+
 double sheet_increment = (sheet_fully_out - sheet_fully_in)/100.0;
 
 enum sailByCourse {  
@@ -304,9 +305,9 @@ void printTelemetryData(){
     dtostrf(battery_voltage_1, 7, 3, battery_voltage_string_1);
     dtostrf(battery_voltage_2, 7, 3, battery_voltage_string_2);
 
-    sprintf(guiDataRC,"%d, %11ld, %11ld, %8s, %8s, %8d, %8d, %8d, %8d, %8d, %8s, %8d, %d, %d, %d", 
+    sprintf(guiDataRC,"%d, %11ld, %11ld, %8s, %8s, %8d, %8d, %8d, %8d, %8d, %8s, %8d, %d, %d, %d, %d", 
     mode, current_position -> longitude, current_position -> latitude,cogStr,current_headingStr,apparentWind, 
-    (int)appWindAvg,sheet_percentage,g_gps -> hemisphereSatelites,g_gps->hdop, sogStr, rudderAngle,resetInstructions,battery_voltage_reading_1, battery_voltage_reading_2);  
+    (int)appWindAvg,sheet_percentage,g_gps -> hemisphereSatelites,g_gps->hdop, sogStr, rudderAngle,resetInstructions,battery_voltage_reading_1, battery_voltage_reading_2, radio_in[sheet_output]);  
 
     Serial.println(guiDataRC);   
   }                                                            
