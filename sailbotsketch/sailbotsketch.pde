@@ -33,7 +33,7 @@ double rudder_centre = 1519+100; //11 degree offset on 2013 rudder
 double rudder_increment = 8.97;
 
 // RC Value when sheets are all the way out
-double sheet_fully_out = 1932;
+double sheet_fully_out = 1900;
 // RC Value when sheets are all the way in
 double sheet_fully_in = 1319;
 
