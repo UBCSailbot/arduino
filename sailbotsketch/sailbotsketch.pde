@@ -44,7 +44,7 @@ enum sailByCourse {
   cogMethod,
   apparentWindMethod,
   holdCourseMethod  
-};  
+};
 
 int sheet_setting[8][4] = {
   {
@@ -92,7 +92,7 @@ double battery_voltage_2;
 long update_timer = 0;
 long windTimer = 0;
 long gpsTimer = 0;
-int  ENCODER_OFFSET=-161;
+int  ENCODER_OFFSET=-71;
 struct Waypoint{
   long latitude;
   long longitude;
